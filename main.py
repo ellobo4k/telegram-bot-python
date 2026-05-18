@@ -1,44 +1,35 @@
 import os
-import time
 import telebot
+import anthropic
 from dotenv import load_dotenv
-from commands import register_commands
 
-# Load environment variables
 load_dotenv()
 
-# Replace 'TELEGRAM_BOT_TOKEN' with the token you received from BotFather
 TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-try:
-    bot = telebot.TeleBot(TOKEN)
-    register_commands(bot)
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
-    @bot.message_handler(commands=['start', 'hello'])
-    def send_welcome(message):
-        """
-        Handle '/start' and '/hello' commands.
+bot = telebot.TeleBot(TOKEN)
+client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
-        Args:
-            message (telebot.types.Message): The message object.
-        """
-        bot.reply_to(message, "Hello! I'm a simple Telegram bot.")
+historiques = {}
 
-    @bot.message_handler(func=lambda msg: True)
-    def echo_all(message):
-        """
-        Echo all incoming text messages back to the user.
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Bonjour ! Je suis ton assistant IA. Comment puis-je t'aider ?")
 
-        Args:
-            message (telebot.types.Message): The message object.
-        """
-        bot.reply_to(message, message.text)
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    uid = message.from_user.id
+    if uid not in historiques:
+        historiques[uid] = []
+    historiques[uid].append({"role": "user", "content": message.text})
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1000,
+        messages=historiques[uid]
+    )
+    texte = response.content[0].text
+    historiques[uid].append({"role": "assistant", "content": texte})
+    bot.reply_to(message, texte)
 
-    # Remove webhook to avoid conflicts with polling
-    bot.delete_webhook(drop_pending_updates=True)
-    bot.polling()
-
-except Exception as e:
-    print(f"CRITICAL ERROR: Failed to initialize bot with provided token. Error: {e}")
-    print("The application will hang to prevent a restart loop. Please fix the TELEGRAM_BOT_TOKEN environment variable.")
-    while True:
-        time.sleep(3600)
+bot.polling()
