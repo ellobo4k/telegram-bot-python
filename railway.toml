@@ -1,3 +1,8 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "pip install pytelegrambotapi python-dotenv anthropic"
+
 [deploy]
-startCommand = "python main.py"
+start​​​​​​​​​​​​​​​​
+
 
