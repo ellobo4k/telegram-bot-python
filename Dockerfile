@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim 
 WORKDIR /app
 COPY . .
 RUN pip install pytelegrambotapi python-dotenv anthropic
